@@ -1352,47 +1352,28 @@ def render_card(
         0.10,
     )
 
-    html = f"""
-    <div style="
-        border-left: 5px solid {color};
-        background: {background};
-        padding: 10px 12px;
-        margin: 8px 0;
-        border-radius: 9px;
-    ">
-        <div style="
-            font-weight: 700;
-            font-size: 0.98rem;
-        ">
-            {title}
-        </div>
-
-        <div style="
-            opacity: 0.76;
-            font-size: 0.82rem;
-            margin-top: 2px;
-        ">
-            {subtitle}
-        </div>
-
-        <div style="
-            margin-top: 6px;
-            font-size: 0.87rem;
-        ">
-            {start.strftime("%I:%M %p")}
-            –
-            {end.strftime("%I:%M %p")}
-        </div>
-
-        <div style="
-            opacity: 0.65;
-            font-size: 0.76rem;
-            margin-top: 3px;
-        ">
-            {item_type}
-        </div>
-    </div>
-    """
+    html = (
+        f'<div style="'
+        f'border-left:5px solid {color};'
+        f'background:{background};'
+        f'padding:10px 12px;'
+        f'margin:8px 0;'
+        f'border-radius:9px;'
+        f'">'
+        f'<div style="font-weight:700;font-size:0.98rem;">'
+        f'{title}'
+        f'</div>'
+        f'<div style="opacity:0.76;font-size:0.82rem;margin-top:2px;">'
+        f'{subtitle}'
+        f'</div>'
+        f'<div style="margin-top:6px;font-size:0.87rem;">'
+        f'{start.strftime("%I:%M %p")} – {end.strftime("%I:%M %p")}'
+        f'</div>'
+        f'<div style="opacity:0.65;font-size:0.76rem;margin-top:3px;">'
+        f'{item_type}'
+        f'</div>'
+        f'</div>'
+    )
 
     st.markdown(
         html,
