@@ -2205,11 +2205,6 @@ new_course_color = st.color_picker(
 
 st.session_state.new_course_color = new_course_color
 
-    if st.button(
-        "Add Course",
-        use_container_width=True,
-        key="add_course_button",
-    ):
 
         cleaned = (
             new_course_name.strip()
