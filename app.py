@@ -2155,13 +2155,55 @@ with st.sidebar:
         )
     )
 
-    new_course_color = (
-        st.color_picker(
-            "Course color",
-            "#4F8EF7",
-            key="new_course_color",
+PRESET_COLORS = {
+    "Blue": "#4F8EF7",
+    "Green": "#4CAF50",
+    "Purple": "#9C6ADE",
+    "Orange": "#F59E0B",
+    "Red": "#EF5350",
+    "Pink": "#EC4899",
+}
+
+if "new_course_color" not in st.session_state:
+    st.session_state.new_course_color = "#4F8EF7"
+
+st.caption("Quick colors")
+
+preset_cols = st.columns(6)
+
+for index, (color_name, hex_color) in enumerate(PRESET_COLORS.items()):
+
+    with preset_cols[index]:
+
+        st.markdown(
+            f"""
+            <div style="
+                width:100%;
+                height:18px;
+                border-radius:6px;
+                background:{hex_color};
+                margin-bottom:4px;
+            "></div>
+            """,
+            unsafe_allow_html=True,
         )
-    )
+
+        if st.button(
+            "●",
+            key=f"preset_color_{color_name}",
+            help=color_name,
+            use_container_width=True,
+        ):
+            st.session_state.new_course_color = hex_color
+            st.rerun()
+
+new_course_color = st.color_picker(
+    "Custom color",
+    value=st.session_state.new_course_color,
+    key="course_color_picker",
+)
+
+st.session_state.new_course_color = new_course_color
 
     if st.button(
         "Add Course",
