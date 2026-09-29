@@ -16,7 +16,6 @@ st.set_page_config(
     page_title="Smart Study Planner",
     page_icon="📚",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
 st.markdown(
@@ -25,10 +24,6 @@ st.markdown(
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 2rem;
-    }
-
-    [data-testid="stSidebar"] {
-        min-width: 310px;
     }
 
     .planner-muted {
@@ -2122,22 +2117,6 @@ def build_week_pdf(
     buffer.seek(0)
 
     return buffer.getvalue()
-
-
-# =========================================================
-# SIDEBAR
-# =========================================================
-
-with st.sidebar:
-
-    st.header(
-        "Planner Setup"
-    )
-
-    st.caption(
-        "Use the sidebar arrow to collapse this panel "
-        "whenever you want more calendar space."
-    )
 
 # =====================================================
 # COURSES
