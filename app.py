@@ -2139,21 +2139,17 @@ with st.sidebar:
         "whenever you want more calendar space."
     )
 
-    # =====================================================
-    # COURSES
-    # =====================================================
+# =====================================================
+# COURSES
+# =====================================================
 
-    st.subheader(
-        "1. Courses"
-    )
+st.subheader("1. Courses")
 
-    new_course_name = (
-        st.text_input(
-            "Course name",
-            placeholder="Biology",
-            key="new_course_name",
-        )
-    )
+new_course_name = st.text_input(
+    "Course name",
+    placeholder="Biology",
+    key="new_course_name",
+)
 
 PRESET_COLORS = {
     "Blue": "#4F8EF7",
@@ -2210,82 +2206,65 @@ if st.button(
     use_container_width=True,
     key="add_course_button",
 ):
-        cleaned = (
-            new_course_name.strip()
-        )
 
-        existing = [
-            course["name"].lower()
-            for course
-            in st.session_state.courses
-        ]
+    cleaned = new_course_name.strip()
 
-        if not cleaned:
+    existing = [
+        course["name"].lower()
+        for course in st.session_state.courses
+    ]
 
-            st.error(
-                "Enter a course name."
-            )
+    if not cleaned:
 
-        elif cleaned.lower() in existing:
+        st.error("Enter a course name.")
 
-            st.error(
-                "That course already exists."
-            )
+    elif cleaned.lower() in existing:
 
-        else:
-
-            st.session_state.courses.append(
-                {
-                    "id": next_id(
-                        st.session_state.courses
-                    ),
-                    "name": cleaned,
-                    "color": (
-                        new_course_color
-                    ),
-                }
-            )
-
-            st.rerun()
-
-    if st.session_state.courses:
-
-        for course in st.session_state.courses:
-
-            st.markdown(
-                (
-                    f'<div style="'
-                    f'display:flex;'
-                    f'align-items:center;'
-                    f'gap:8px;'
-                    f'margin:5px 0;'
-                    f'">'
-
-                    f'<div style="'
-                    f'width:14px;'
-                    f'height:14px;'
-                    f'border-radius:4px;'
-                    f'background:'
-                    f'{course["color"]};'
-                    f'">'
-                    f'</div>'
-
-                    f'<span>'
-                    f'{course["name"]}'
-                    f'</span>'
-
-                    f'</div>'
-                ),
-                unsafe_allow_html=True,
-            )
+        st.error("That course already exists.")
 
     else:
 
-        st.info(
-            "Add at least one course "
-            "for academic planning."
+        st.session_state.courses.append(
+            {
+                "id": next_id(
+                    st.session_state.courses
+                ),
+                "name": cleaned,
+                "color": new_course_color,
+            }
         )
 
+        st.rerun()
+
+if st.session_state.courses:
+
+    for course in st.session_state.courses:
+
+        st.markdown(
+            f"""
+            <div style="
+                display:flex;
+                align-items:center;
+                gap:8px;
+                margin:5px 0;
+            ">
+                <div style="
+                    width:14px;
+                    height:14px;
+                    border-radius:4px;
+                    background:{course["color"]};
+                "></div>
+                <span>{course["name"]}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+else:
+
+    st.info(
+        "Add at least one course for academic planning."
+    )
     st.divider()
 
     # =====================================================
