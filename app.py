@@ -16,73 +16,15 @@ st.set_page_config(
     page_title="Smart Study Planner",
     page_icon="📚",
     layout="wide",
-)
-
-st.markdown(
-    """
-    <style>
-    .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 2rem;
-    }
-
-    .planner-muted {
-        opacity: .72;
-        font-size: .88rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
+    initial_sidebar_state="expanded",
 )
 
 st.title("📚 Smart Study Planner")
 
 st.caption(
-    "Build a realistic weekly plan around courses, study time, projects, "
-    "fixed events, travel, tasks, and reminders."
+    "Build a realistic weekly plan around classes, studying, assignments, "
+    "projects, events, travel, tasks, and reminders."
 )
-
-
-# =========================================================
-# SESSION STATE
-# =========================================================
-
-DEFAULTS = {
-    "courses": [],
-    "work_windows": [],
-    "events": [],
-    "study_topics": [],
-    "academic_work": [],
-    "tasks": [],
-    "reminders": [],
-    "schedule": [],
-    "week_offset": 0,
-
-    # Planner preferences
-    "include_breaks": True,
-    "break_after_minutes": 60,
-    "break_length_minutes": 15,
-    "preferred_study_minutes": 60,
-    "max_study_minutes": 90,
-    "daily_academic_cap": 360,
-    "use_course_cap": True,
-    "daily_course_cap": 180,
-
-    # UI
-    "show_preferences": True,
-    "work_days_picker": [],
-}
-
-
-for key, default_value in DEFAULTS.items():
-
-    if key not in st.session_state:
-
-        if isinstance(default_value, list):
-            st.session_state[key] = []
-
-        else:
-            st.session_state[key] = default_value
 
 
 # =========================================================
@@ -107,13 +49,59 @@ PRIORITY_VALUE = {
     "High": 3,
 }
 
+PRESET_COLORS = {
+    "Blue": "#4F8EF7",
+    "Green": "#4CAF50",
+    "Purple": "#9C6ADE",
+    "Orange": "#F59E0B",
+    "Red": "#EF5350",
+    "Pink": "#EC4899",
+}
+
+
+# =========================================================
+# SESSION STATE
+# =========================================================
+
+DEFAULTS = {
+    "courses": [],
+    "work_windows": [],
+    "events": [],
+    "study_topics": [],
+    "academic_work": [],
+    "tasks": [],
+    "reminders": [],
+    "schedule": [],
+    "week_offset": 0,
+
+    # Preferences
+    "include_breaks": True,
+    "break_after_minutes": 60,
+    "break_length_minutes": 15,
+    "preferred_study_minutes": 60,
+    "max_study_minutes": 90,
+    "daily_academic_cap": 360,
+    "use_course_cap": True,
+    "daily_course_cap": 180,
+
+    # UI
+    "show_preferences": True,
+    "work_days_picker": [],
+}
+
+for key, default_value in DEFAULTS.items():
+    if key not in st.session_state:
+        if isinstance(default_value, list):
+            st.session_state[key] = []
+        else:
+            st.session_state[key] = default_value
+
 
 # =========================================================
 # GENERAL HELPERS
 # =========================================================
 
 def next_id(collection):
-
     if not collection:
         return 1
 
@@ -124,14 +112,12 @@ def next_id(collection):
 
 
 def get_week_start(day):
-
     return day - timedelta(
         days=day.weekday()
     )
 
 
 def get_visible_week():
-
     monday = (
         get_week_start(date.today())
         + timedelta(
@@ -146,7 +132,6 @@ def get_visible_week():
 
 
 def format_minutes(minutes):
-
     minutes = max(
         0,
         int(round(minutes)),
@@ -167,7 +152,6 @@ def format_minutes(minutes):
 
 
 def combine(day, clock_time):
-
     return datetime.combine(
         day,
         clock_time,
@@ -175,7 +159,6 @@ def combine(day, clock_time):
 
 
 def minutes_between(start, end):
-
     return max(
         0,
         int(
@@ -186,7 +169,6 @@ def minutes_between(start, end):
 
 
 def priority_number(priority):
-
     return PRIORITY_VALUE.get(
         priority,
         2,
@@ -194,7 +176,6 @@ def priority_number(priority):
 
 
 def deadline_urgency(deadline):
-
     days_left = (
         deadline - date.today()
     ).days
@@ -221,7 +202,6 @@ def deadline_urgency(deadline):
 
 
 def item_score(item):
-
     return (
         deadline_urgency(
             item["deadline"]
@@ -239,9 +219,7 @@ def item_score(item):
 
 
 def course_by_name(name):
-
     for course in st.session_state.courses:
-
         if course["name"] == name:
             return course
 
@@ -249,7 +227,6 @@ def course_by_name(name):
 
 
 def course_color(name):
-
     course = course_by_name(
         name
     )
@@ -269,7 +246,6 @@ def calculate_study_time(
     familiarity,
     goal,
 ):
-
     base_times = {
         "Easy": 60,
         "Medium": 120,
@@ -298,11 +274,10 @@ def calculate_study_time(
 
 
 # =========================================================
-# WORK WINDOWS
+# INTERVAL HELPERS
 # =========================================================
 
 def merge_intervals(intervals):
-
     if not intervals:
         return []
 
@@ -315,18 +290,12 @@ def merge_intervals(intervals):
         intervals[0]
     ]
 
-    for (
-        current_start,
-        current_end,
-    ) in intervals[1:]:
-
-        (
-            previous_start,
-            previous_end,
-        ) = merged[-1]
+    for current_start, current_end in intervals[1:]:
+        previous_start, previous_end = (
+            merged[-1]
+        )
 
         if current_start <= previous_end:
-
             merged[-1] = (
                 previous_start,
                 max(
@@ -334,9 +303,7 @@ def merge_intervals(intervals):
                     current_end,
                 ),
             )
-
         else:
-
             merged.append(
                 (
                     current_start,
@@ -347,8 +314,65 @@ def merge_intervals(intervals):
     return merged
 
 
-def work_windows_for_date(day):
+def intervals_overlap(
+    start1,
+    end1,
+    start2,
+    end2,
+):
+    return (
+        start1 < end2
+        and start2 < end1
+    )
 
+
+def subtract_interval(
+    intervals,
+    blocked_start,
+    blocked_end,
+):
+    result = []
+
+    for start, end in intervals:
+
+        if not intervals_overlap(
+            start,
+            end,
+            blocked_start,
+            blocked_end,
+        ):
+            result.append(
+                (
+                    start,
+                    end,
+                )
+            )
+            continue
+
+        if start < blocked_start:
+            result.append(
+                (
+                    start,
+                    blocked_start,
+                )
+            )
+
+        if blocked_end < end:
+            result.append(
+                (
+                    blocked_end,
+                    end,
+                )
+            )
+
+    return result
+
+
+# =========================================================
+# WORK WINDOWS
+# =========================================================
+
+def work_windows_for_date(day):
     weekday = day.strftime(
         "%A"
     )
@@ -371,7 +395,6 @@ def work_windows_for_date(day):
         )
 
         if end > start:
-
             intervals.append(
                 (
                     start,
@@ -389,7 +412,6 @@ def work_windows_for_date(day):
 # =========================================================
 
 def events_for_date(day):
-
     weekday = day.strftime(
         "%A"
     )
@@ -399,14 +421,11 @@ def events_for_date(day):
     for event in st.session_state.events:
 
         if event["recurring"]:
-
             include = (
                 weekday
                 in event["days"]
             )
-
         else:
-
             include = (
                 event["date"]
                 == day
@@ -482,15 +501,14 @@ def events_for_date(day):
 # =========================================================
 
 def reserved_reminders_for_date(day):
-
     results = []
 
     for reminder in st.session_state.reminders:
 
-        if (
-            reminder["date"] != day
-            or reminder["reserve_minutes"] <= 0
-        ):
+        if reminder["date"] != day:
+            continue
+
+        if reminder["reserve_minutes"] <= 0:
             continue
 
         start = combine(
@@ -518,101 +536,35 @@ def reserved_reminders_for_date(day):
 
 
 # =========================================================
-# FREE INTERVAL LOGIC
+# FREE TIME
 # =========================================================
 
-def intervals_overlap(
-    start1,
-    end1,
-    start2,
-    end2,
-):
-
-    return (
-        start1 < end2
-        and start2 < end1
-    )
-
-
-def subtract_interval(
-    intervals,
-    blocked_start,
-    blocked_end,
-):
-
-    result = []
-
-    for start, end in intervals:
-
-        if not intervals_overlap(
-            start,
-            end,
-            blocked_start,
-            blocked_end,
-        ):
-
-            result.append(
-                (
-                    start,
-                    end,
-                )
-            )
-
-            continue
-
-        if start < blocked_start:
-
-            result.append(
-                (
-                    start,
-                    blocked_start,
-                )
-            )
-
-        if blocked_end < end:
-
-            result.append(
-                (
-                    blocked_end,
-                    end,
-                )
-            )
-
-    return result
-
-
 def free_intervals_for_date(day):
-
     free = work_windows_for_date(
         day
     )
 
-    # Block fixed events + travel buffers
+    # Events + travel buffers
     for event in events_for_date(
         day
     ):
-
         free = subtract_interval(
             free,
             event["blocked_start"],
             event["blocked_end"],
         )
 
-    # Block reminders that reserve time
-    for (
-        start,
-        end,
-    ) in reserved_reminders_for_date(
+    # Reserved reminders
+    for start, end in reserved_reminders_for_date(
         day
     ):
-
         free = subtract_interval(
             free,
             start,
             end,
         )
 
-    # Block generated schedule
+    # Already-created schedule blocks
     for block in st.session_state.schedule:
 
         if block["date"] != day:
@@ -635,7 +587,6 @@ def free_intervals_for_date(day):
 # =========================================================
 
 def academic_minutes_on_day(day):
-
     return sum(
         block["work_minutes"]
         for block
@@ -656,7 +607,6 @@ def course_minutes_on_day(
     day,
     course,
 ):
-
     return sum(
         block["work_minutes"]
         for block
@@ -677,7 +627,6 @@ def course_minutes_on_day(
 
 
 def academic_capacity_left(day):
-
     return max(
         0,
         (
@@ -693,7 +642,6 @@ def course_capacity_left(
     day,
     course,
 ):
-
     if not st.session_state.use_course_cap:
         return 100000
 
@@ -710,13 +658,12 @@ def course_capacity_left(
 
 
 # =========================================================
-# BREAKS
+# BREAK LOGIC
 # =========================================================
 
 def elapsed_time_needed(
     work_minutes,
 ):
-
     work_minutes = int(
         work_minutes
     )
@@ -745,19 +692,19 @@ def elapsed_time_needed(
         % focus
         == 0
     ):
-
         breaks = max(
             0,
             full_chunks - 1,
         )
-
     else:
-
         breaks = full_chunks
 
     return (
         work_minutes
-        + breaks * break_length
+        + (
+            breaks
+            * break_length
+        )
     )
 
 
@@ -767,18 +714,14 @@ def create_work_and_break_blocks(
     start,
     work_minutes,
 ):
-
     current = start
     remaining = work_minutes
 
     if st.session_state.include_breaks:
-
         focus_length = (
             st.session_state.break_after_minutes
         )
-
     else:
-
         focus_length = work_minutes
 
     while remaining > 0:
@@ -807,7 +750,9 @@ def create_work_and_break_blocks(
                 "start": current,
                 "end": focus_end,
                 "work_minutes": focus_minutes,
-                "deadline": item["deadline"],
+                "deadline": item[
+                    "deadline"
+                ],
                 "source_id": item.get(
                     "source_id"
                 ),
@@ -830,7 +775,6 @@ def create_work_and_break_blocks(
             remaining > 0
             and st.session_state.include_breaks
         ):
-
             break_end = (
                 current
                 + timedelta(
@@ -863,7 +807,7 @@ def create_work_and_break_blocks(
 
 
 # =========================================================
-# FIND A SLOT
+# FIND A SCHEDULING SLOT
 # =========================================================
 
 def find_slot(
@@ -871,7 +815,6 @@ def find_slot(
     requested_work_minutes,
     course="",
 ):
-
     daily_left = (
         academic_capacity_left(
             day
@@ -879,16 +822,13 @@ def find_slot(
     )
 
     if course:
-
         course_left = (
             course_capacity_left(
                 day,
                 course,
             )
         )
-
     else:
-
         course_left = 100000
 
     allowed_work = min(
@@ -900,14 +840,10 @@ def find_slot(
     if allowed_work <= 0:
         return None
 
-    for (
-        start,
-        end,
-    ) in free_intervals_for_date(
+    for start, end in free_intervals_for_date(
         day
     ):
-
-        interval_minutes = (
+        available_clock_minutes = (
             minutes_between(
                 start,
                 end,
@@ -924,9 +860,8 @@ def find_slot(
                 elapsed_time_needed(
                     possible_work
                 )
-                <= interval_minutes
+                <= available_clock_minutes
             ):
-
                 return (
                     start,
                     possible_work,
@@ -938,7 +873,9 @@ def find_slot(
 
 
 # =========================================================
-# COURSE-BATCHED STUDY SCHEDULER
+# STUDY SCHEDULER
+# Course batching:
+# stay on one course before moving to another
 # =========================================================
 
 def course_study_score(
@@ -946,7 +883,6 @@ def course_study_score(
     day,
     remaining,
 ):
-
     topics = [
         topic
         for topic
@@ -975,7 +911,6 @@ def course_study_score(
 
 
 def schedule_study_topics():
-
     remaining = {
         topic["id"]:
         topic["recommended_minutes"]
@@ -1000,17 +935,16 @@ def schedule_study_topics():
         current_day
         <= latest_deadline
     ):
-
-        active_courses = []
-
         all_courses = {
             topic["course"]
             for topic
             in st.session_state.study_topics
         }
 
-        for course in all_courses:
-
+        active_courses = [
+            course
+            for course
+            in all_courses
             if (
                 course_study_score(
                     course,
@@ -1018,15 +952,9 @@ def schedule_study_topics():
                     remaining,
                 )
                 >= 0
-            ):
+            )
+        ]
 
-                active_courses.append(
-                    course
-                )
-
-        # Most urgent course first.
-        # Once selected, stay on it until its daily cap
-        # is used or its work is finished.
         active_courses.sort(
             key=lambda course: (
                 -course_study_score(
@@ -1043,6 +971,8 @@ def schedule_study_topics():
 
         for course in active_courses:
 
+            # Stay on this course until its daily capacity
+            # is exhausted or no topic remains.
             while (
                 academic_capacity_left(
                     current_day
@@ -1052,7 +982,6 @@ def schedule_study_topics():
                     course,
                 ) > 0
             ):
-
                 topics = [
                     topic
                     for topic
@@ -1076,37 +1005,40 @@ def schedule_study_topics():
 
                 topics.sort(
                     key=lambda topic: (
-                        -item_score(topic),
-                        topic["deadline"],
-                        remaining[
-                            topic["id"]
+                        -item_score(
+                            topic
+                        ),
+                        topic[
+                            "deadline"
                         ],
                     )
                 )
 
-                topic = topics[0]
+                topic = (
+                    topics[0]
+                )
 
                 topic_id = (
                     topic["id"]
                 )
 
-                # Prefer full study blocks.
-                # Short blocks are allowed only when
-                # that is the final remainder.
+                remaining_topic = (
+                    remaining[
+                        topic_id
+                    ]
+                )
+
+                # Prefer full normal study blocks.
+                # A short block is only used for the final remainder.
                 if (
-                    remaining[topic_id]
+                    remaining_topic
                     <= st.session_state
                     .preferred_study_minutes
                 ):
-
                     desired = (
-                        remaining[
-                            topic_id
-                        ]
+                        remaining_topic
                     )
-
                 else:
-
                     desired = (
                         st.session_state
                         .preferred_study_minutes
@@ -1119,9 +1051,7 @@ def schedule_study_topics():
                     ],
                     st.session_state
                     .max_study_minutes,
-                    remaining[
-                        topic_id
-                    ],
+                    remaining_topic,
                     course_capacity_left(
                         current_day,
                         course,
@@ -1130,17 +1060,6 @@ def schedule_study_topics():
                         current_day
                     ),
                 )
-
-                # Do not deliberately create
-                # 30m Python → 30m Cloud nonsense.
-                if (
-                    desired < 60
-                    and remaining[
-                        topic_id
-                    ] > desired
-                ):
-
-                    break
 
                 slot = find_slot(
                     current_day,
@@ -1151,12 +1070,20 @@ def schedule_study_topics():
                 if slot is None:
                     break
 
-                (
-                    start,
-                    actual_minutes,
-                ) = slot
+                start, actual_minutes = (
+                    slot
+                )
 
-                item = {
+                # Avoid intentional little partial blocks
+                # unless it finishes the topic.
+                if (
+                    actual_minutes < 30
+                    and actual_minutes
+                    < remaining_topic
+                ):
+                    break
+
+                schedule_item = {
                     "name": topic[
                         "topic"
                     ],
@@ -1181,7 +1108,7 @@ def schedule_study_topics():
                 }
 
                 create_work_and_break_blocks(
-                    item,
+                    schedule_item,
                     current_day,
                     start,
                     actual_minutes,
@@ -1197,13 +1124,12 @@ def schedule_study_topics():
 
 
 # =========================================================
-# PROJECT DEPENDENCY CHECK
+# PROJECT DEPENDENCY
 # =========================================================
 
 def project_ready_date(
     work_item,
 ):
-
     linked_ids = (
         work_item.get(
             "linked_topic_ids",
@@ -1232,7 +1158,7 @@ def project_ready_date(
         if topic is None:
             continue
 
-        scheduled = [
+        scheduled_blocks = [
             block
             for block
             in st.session_state.schedule
@@ -1246,26 +1172,31 @@ def project_ready_date(
             )
         ]
 
-        scheduled_minutes = sum(
-            block["work_minutes"]
-            for block in scheduled
+        completed_minutes = sum(
+            block[
+                "work_minutes"
+            ]
+            for block
+            in scheduled_blocks
         )
 
         if (
-            scheduled_minutes
+            completed_minutes
             < topic[
                 "recommended_minutes"
             ]
         ):
-
             return topic[
                 "deadline"
             ]
 
         final_dates.append(
             max(
-                block["date"]
-                for block in scheduled
+                block[
+                    "date"
+                ]
+                for block
+                in scheduled_blocks
             )
         )
 
@@ -1278,16 +1209,18 @@ def project_ready_date(
 
 
 # =========================================================
-# COURSE-BATCHED ASSIGNMENTS / PROJECTS
+# ASSIGNMENT / PROJECT SCHEDULER
+# Course batching
 # =========================================================
 
 def schedule_academic_work():
-
     items = []
 
     for source in st.session_state.academic_work:
 
-        item = source.copy()
+        item = (
+            source.copy()
+        )
 
         item[
             "remaining_minutes"
@@ -1302,7 +1235,9 @@ def schedule_academic_work():
     if not items:
         return
 
-    current_day = date.today()
+    current_day = (
+        date.today()
+    )
 
     latest_deadline = max(
         item["deadline"]
@@ -1313,13 +1248,12 @@ def schedule_academic_work():
         current_day
         <= latest_deadline
     ):
-
-        active_courses = []
-
         all_courses = {
             item["course"]
             for item in items
         }
+
+        active_courses = []
 
         for course in all_courses:
 
@@ -1385,7 +1319,6 @@ def schedule_academic_work():
                     course,
                 ) > 0
             ):
-
                 relevant = [
                     item
                     for item in items
@@ -1415,15 +1348,18 @@ def schedule_academic_work():
 
                 relevant.sort(
                     key=lambda item: (
-                        -item_score(item),
-                        item["deadline"],
+                        -item_score(
+                            item
+                        ),
                         item[
-                            "remaining_minutes"
+                            "deadline"
                         ],
                     )
                 )
 
-                item = relevant[0]
+                item = (
+                    relevant[0]
+                )
 
                 desired = min(
                     item[
@@ -1450,10 +1386,9 @@ def schedule_academic_work():
                 if slot is None:
                     break
 
-                (
-                    start,
-                    actual_minutes,
-                ) = slot
+                start, actual_minutes = (
+                    slot
+                )
 
                 schedule_item = {
                     "name": item[
@@ -1502,12 +1437,13 @@ def schedule_academic_work():
 # =========================================================
 
 def schedule_tasks():
-
     items = []
 
     for task in st.session_state.tasks:
 
-        item = task.copy()
+        item = (
+            task.copy()
+        )
 
         item[
             "remaining_minutes"
@@ -1519,10 +1455,11 @@ def schedule_tasks():
             item
         )
 
-    # Urgent first, shorter task wins ties.
     items.sort(
         key=lambda item: (
-            -item_score(item),
+            -item_score(
+                item
+            ),
             item[
                 "remaining_minutes"
             ],
@@ -1534,12 +1471,12 @@ def schedule_tasks():
         day = date.today()
 
         while (
-            day <= item["deadline"]
+            day
+            <= item["deadline"]
             and item[
                 "remaining_minutes"
             ] > 0
         ):
-
             free = (
                 free_intervals_for_date(
                     day
@@ -1547,11 +1484,9 @@ def schedule_tasks():
             )
 
             if not free:
-
                 day += timedelta(
                     days=1
                 )
-
                 continue
 
             desired = min(
@@ -1574,52 +1509,30 @@ def schedule_tasks():
                     )
                 )
 
-                if (
-                    available
-                    >= min(
-                        desired,
-                        item[
-                            "remaining_minutes"
-                        ],
-                    )
-                ):
+                if available < 10:
+                    continue
 
-                    candidate = (
-                        start,
-                        min(
-                            desired,
-                            available,
-                        ),
-                    )
+                block_minutes = min(
+                    desired,
+                    available,
+                )
 
-                    break
+                candidate = (
+                    start,
+                    block_minutes,
+                )
 
-                if (
-                    available >= 10
-                    and candidate
-                    is None
-                ):
-
-                    candidate = (
-                        start,
-                        min(
-                            desired,
-                            available,
-                        ),
-                    )
+                break
 
             if candidate is None:
-
                 day += timedelta(
                     days=1
                 )
-
                 continue
 
-            (
-                start,
-                block_minutes,
-            ) = candidate
+            start, block_minutes = (
+                candidate
+            )
 
             block_end = (
                 start
@@ -1662,32 +1575,25 @@ def schedule_tasks():
 
 
 # =========================================================
-# REBUILD
+# REBUILD SCHEDULE
 # =========================================================
 
 def rebuild_schedule():
-
     st.session_state.schedule = []
 
-    # Learning first
     schedule_study_topics()
-
-    # Then academic execution
     schedule_academic_work()
-
-    # Then normal life tasks
     schedule_tasks()
 
 
 # =========================================================
-# CARD STYLING
+# CARD RENDERING
 # =========================================================
 
 def hex_to_rgba(
     hex_color,
     alpha=0.10,
 ):
-
     hex_color = (
         hex_color.lstrip(
             "#"
@@ -1695,7 +1601,6 @@ def hex_to_rgba(
     )
 
     if len(hex_color) != 6:
-
         return (
             f"rgba(120,120,120,"
             f"{alpha})"
@@ -1718,10 +1623,7 @@ def hex_to_rgba(
 
     return (
         f"rgba("
-        f"{r},"
-        f"{g},"
-        f"{b},"
-        f"{alpha}"
+        f"{r},{g},{b},{alpha}"
         f")"
     )
 
@@ -1736,43 +1638,41 @@ def render_card(
     notes="",
     url="",
 ):
-
-    background = hex_to_rgba(
-        color,
-        0.10,
+    background = (
+        hex_to_rgba(
+            color,
+            0.10,
+        )
     )
 
-    if notes:
-
-        safe_notes = (
-            notes
-            .replace(
-                "<",
-                "&lt;",
-            )
-            .replace(
-                ">",
-                "&gt;",
-            )
+    safe_notes = (
+        notes.replace(
+            "<",
+            "&lt;",
+        ).replace(
+            ">",
+            "&gt;",
         )
+        if notes
+        else ""
+    )
 
-        notes_html = (
+    notes_html = (
+        (
             f'<div style="'
             f'margin-top:6px;'
-            f'opacity:.76;'
+            f'opacity:.72;'
             f'font-size:.78rem;'
             f'">'
             f'{safe_notes}'
             f'</div>'
         )
+        if safe_notes
+        else ""
+    )
 
-    else:
-
-        notes_html = ""
-
-    if url:
-
-        link_html = (
+    link_html = (
+        (
             f'<div style="'
             f'margin-top:7px;'
             f'">'
@@ -1782,10 +1682,9 @@ def render_card(
             f'</a>'
             f'</div>'
         )
-
-    else:
-
-        link_html = ""
+        if url
+        else ""
+    )
 
     html = (
         f'<div style="'
@@ -1795,14 +1694,12 @@ def render_card(
         f'margin:8px 0;'
         f'border-radius:9px;'
         f'">'
-
         f'<div style="'
         f'font-weight:700;'
         f'font-size:.98rem;'
         f'">'
         f'{title}'
         f'</div>'
-
         f'<div style="'
         f'opacity:.76;'
         f'font-size:.82rem;'
@@ -1810,7 +1707,6 @@ def render_card(
         f'">'
         f'{subtitle}'
         f'</div>'
-
         f'<div style="'
         f'margin-top:6px;'
         f'font-size:.87rem;'
@@ -1819,7 +1715,6 @@ def render_card(
         f'– '
         f'{end.strftime("%I:%M %p")}'
         f'</div>'
-
         f'<div style="'
         f'opacity:.65;'
         f'font-size:.76rem;'
@@ -1827,10 +1722,8 @@ def render_card(
         f'">'
         f'{item_type}'
         f'</div>'
-
         f'{notes_html}'
         f'{link_html}'
-
         f'</div>'
     )
 
@@ -1841,29 +1734,24 @@ def render_card(
 
 
 # =========================================================
-# PDF EXPORT
+# PDF
 # =========================================================
 
 def pdf_lines_for_day(day):
-
     lines = []
 
     for event in events_for_date(
         day
     ):
+        location = ""
 
         if event.get(
             "location"
         ):
-
             location = (
                 f" @ "
                 f"{event['location']}"
             )
-
-        else:
-
-            location = ""
 
         lines.append(
             (
@@ -1887,11 +1775,8 @@ def pdf_lines_for_day(day):
             continue
 
         if block["type"] == "Break":
-
             label = "BREAK"
-
         else:
-
             label = (
                 f"{block['type'].upper()}: "
                 f"{block['name']}"
@@ -1900,7 +1785,6 @@ def pdf_lines_for_day(day):
         if block.get(
             "course"
         ):
-
             label += (
                 f" "
                 f"({block['course']})"
@@ -1954,7 +1838,6 @@ def pdf_lines_for_day(day):
 def build_week_pdf(
     week_dates,
 ):
-
     buffer = BytesIO()
 
     pdf = canvas.Canvas(
@@ -1962,7 +1845,9 @@ def build_week_pdf(
         pagesize=letter,
     )
 
-    width, height = letter
+    width, height = (
+        letter
+    )
 
     for day in week_dates:
 
@@ -2066,7 +1951,9 @@ def build_week_pdf(
                         10,
                     )
 
-                    y = height - 82
+                    y = (
+                        height - 82
+                    )
 
                 pdf.drawString(
                     48,
@@ -2086,7 +1973,7 @@ def build_week_pdf(
         pdf.drawString(
             48,
             y,
-            "Notes",
+            "Notes"
         )
 
         y -= 16
@@ -2118,132 +2005,173 @@ def build_week_pdf(
 
     return buffer.getvalue()
 
-# =====================================================
-# COURSES
-# =====================================================
 
-st.subheader("1. Courses")
+# =========================================================
+# SIDEBAR
+# =========================================================
 
-new_course_name = st.text_input(
-    "Course name",
-    placeholder="Biology",
-    key="new_course_name",
-)
+with st.sidebar:
 
-PRESET_COLORS = {
-    "Blue": "#4F8EF7",
-    "Green": "#4CAF50",
-    "Purple": "#9C6ADE",
-    "Orange": "#F59E0B",
-    "Red": "#EF5350",
-    "Pink": "#EC4899",
-}
+    st.header(
+        "Planner Setup"
+    )
 
-if "new_course_color" not in st.session_state:
-    st.session_state.new_course_color = "#4F8EF7"
+    # =====================================================
+    # COURSES
+    # =====================================================
 
-st.caption("Quick colors")
+    st.subheader(
+        "1. Courses"
+    )
 
-preset_cols = st.columns(6)
-
-for index, (color_name, hex_color) in enumerate(PRESET_COLORS.items()):
-
-    with preset_cols[index]:
-
-        st.markdown(
-            f"""
-            <div style="
-                width:100%;
-                height:18px;
-                border-radius:6px;
-                background:{hex_color};
-                margin-bottom:4px;
-            "></div>
-            """,
-            unsafe_allow_html=True,
+    new_course_name = (
+        st.text_input(
+            "Course name",
+            placeholder="Biology",
+            key="new_course_name",
         )
+    )
 
-        if st.button(
-            "●",
-            key=f"preset_color_{color_name}",
-            help=color_name,
-            use_container_width=True,
-        ):
-            st.session_state.new_course_color = hex_color
-            st.rerun()
+    st.caption(
+        "Quick color"
+    )
 
-new_course_color = st.color_picker(
-    "Custom color",
-    value=st.session_state.new_course_color,
-    key="course_color_picker",
-)
+    preset_choice = (
+        st.radio(
+            "Preset",
+            [
+                "Blue",
+                "Green",
+                "Purple",
+                "Orange",
+                "Red",
+                "Pink",
+                "Custom",
+            ],
+            horizontal=True,
+            key="course_color_preset",
+            label_visibility="collapsed",
+        )
+    )
 
-st.session_state.new_course_color = new_course_color
+    custom_course_color = (
+        st.color_picker(
+            "Custom color",
+            "#4F8EF7",
+            key="custom_course_color",
+        )
+    )
 
-if st.button(
-    "Add Course",
-    use_container_width=True,
-    key="add_course_button",
-):
+    if preset_choice == "Custom":
 
-    cleaned = new_course_name.strip()
-
-    existing = [
-        course["name"].lower()
-        for course in st.session_state.courses
-    ]
-
-    if not cleaned:
-
-        st.error("Enter a course name.")
-
-    elif cleaned.lower() in existing:
-
-        st.error("That course already exists.")
+        new_course_color = (
+            custom_course_color
+        )
 
     else:
 
-        st.session_state.courses.append(
-            {
-                "id": next_id(
-                    st.session_state.courses
-                ),
-                "name": cleaned,
-                "color": new_course_color,
-            }
+        new_course_color = (
+            PRESET_COLORS[
+                preset_choice
+            ]
         )
 
-        st.rerun()
-
-if st.session_state.courses:
-
-    for course in st.session_state.courses:
-
-        st.markdown(
-            f"""
-            <div style="
-                display:flex;
-                align-items:center;
-                gap:8px;
-                margin:5px 0;
-            ">
-                <div style="
-                    width:14px;
-                    height:14px;
-                    border-radius:4px;
-                    background:{course["color"]};
-                "></div>
-                <span>{course["name"]}</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-else:
-
-    st.info(
-        "Add at least one course for academic planning."
+    # Visual confirmation of selected color
+    st.markdown(
+        (
+            f'<div style="'
+            f'height:22px;'
+            f'border-radius:7px;'
+            f'background:{new_course_color};'
+            f'margin-bottom:8px;'
+            f'">'
+            f'</div>'
+        ),
+        unsafe_allow_html=True,
     )
+
+    if st.button(
+        "Add Course",
+        use_container_width=True,
+        key="add_course_button",
+    ):
+
+        cleaned = (
+            new_course_name.strip()
+        )
+
+        existing = [
+            course[
+                "name"
+            ].lower()
+            for course
+            in st.session_state.courses
+        ]
+
+        if not cleaned:
+
+            st.error(
+                "Enter a course name."
+            )
+
+        elif (
+            cleaned.lower()
+            in existing
+        ):
+
+            st.error(
+                "That course already exists."
+            )
+
+        else:
+
+            st.session_state.courses.append(
+                {
+                    "id": next_id(
+                        st.session_state.courses
+                    ),
+                    "name": cleaned,
+                    "color": (
+                        new_course_color
+                    ),
+                }
+            )
+
+            st.rerun()
+
+    if st.session_state.courses:
+
+        for course in st.session_state.courses:
+
+            st.markdown(
+                (
+                    f'<div style="'
+                    f'display:flex;'
+                    f'align-items:center;'
+                    f'gap:8px;'
+                    f'margin:5px 0;'
+                    f'">'
+                    f'<div style="'
+                    f'width:14px;'
+                    f'height:14px;'
+                    f'border-radius:4px;'
+                    f'background:{course["color"]};'
+                    f'">'
+                    f'</div>'
+                    f'<span>'
+                    f'{course["name"]}'
+                    f'</span>'
+                    f'</div>'
+                ),
+                unsafe_allow_html=True,
+            )
+
+    else:
+
+        st.info(
+            "Add at least one course."
+        )
+
     st.divider()
 
     # =====================================================
@@ -2255,20 +2183,20 @@ else:
     )
 
     st.caption(
-        "Flexible work is only placed "
+        "Flexible work is only scheduled "
         "inside these windows."
     )
 
-    c1, c2, c3 = st.columns(
-        3
+    quick1, quick2, quick3 = (
+        st.columns(3)
     )
 
-    with c1:
+    with quick1:
 
         if st.button(
             "Weekdays",
-            key="weekdays_shortcut",
             use_container_width=True,
+            key="work_weekdays",
         ):
 
             st.session_state.work_days_picker = (
@@ -2277,12 +2205,12 @@ else:
 
             st.rerun()
 
-    with c2:
+    with quick2:
 
         if st.button(
             "Every Day",
-            key="everyday_shortcut",
             use_container_width=True,
+            key="work_everyday",
         ):
 
             st.session_state.work_days_picker = (
@@ -2291,12 +2219,12 @@ else:
 
             st.rerun()
 
-    with c3:
+    with quick3:
 
         if st.button(
             "Clear",
-            key="clear_days_shortcut",
             use_container_width=True,
+            key="work_clear",
         ):
 
             st.session_state.work_days_picker = []
@@ -2305,7 +2233,7 @@ else:
 
     selected_work_days = (
         st.multiselect(
-            "Work days",
+            "Days",
             DAYS,
             key="work_days_picker",
         )
@@ -2318,7 +2246,7 @@ else:
                 17,
                 0,
             ),
-            key="work_window_start",
+            key="work_start",
         )
     )
 
@@ -2329,7 +2257,7 @@ else:
                 21,
                 0,
             ),
-            key="work_window_end",
+            key="work_end",
         )
     )
 
@@ -2378,13 +2306,13 @@ else:
 
         st.warning(
             "Create at least one work window "
-            "before scheduling flexible work."
+            "before adding flexible work."
         )
 
     st.divider()
 
     # =====================================================
-    # PLANNER PREFERENCES
+    # PREFERENCES
     # =====================================================
 
     st.subheader(
@@ -2394,9 +2322,9 @@ else:
     if not st.session_state.show_preferences:
 
         if st.button(
-            "Edit Planner Preferences",
+            "Edit Preferences",
             use_container_width=True,
-            key="edit_preferences_button",
+            key="edit_preferences",
         ):
 
             st.session_state.show_preferences = True
@@ -2419,7 +2347,7 @@ else:
 
             break_after = (
                 st.number_input(
-                    "Work before taking a break (minutes)",
+                    "Work before break (minutes)",
                     min_value=30,
                     max_value=180,
                     value=(
@@ -2467,12 +2395,7 @@ else:
                     .preferred_study_minutes
                 ),
                 step=15,
-                key="pref_study_session",
-                help=(
-                    "The planner aims for this "
-                    "size when it creates a "
-                    "normal study block."
-                ),
+                key="pref_study",
             )
         )
 
@@ -2487,11 +2410,6 @@ else:
                 ),
                 step=15,
                 key="pref_max_study",
-                help=(
-                    "A single study topic will "
-                    "not exceed this length "
-                    "in one sitting."
-                ),
             )
         )
 
@@ -2505,19 +2423,13 @@ else:
                     .daily_academic_cap
                 ),
                 step=30,
-                key="pref_daily_academic_cap",
-                help=(
-                    "Maximum total studying, "
-                    "assignments, and project "
-                    "work per day across all "
-                    "courses."
-                ),
+                key="pref_daily_cap",
             )
         )
 
         use_course_cap = (
             st.checkbox(
-                "Limit how much time one course can use per day",
+                "Limit one course per day",
                 value=(
                     st.session_state
                     .use_course_cap
@@ -2530,7 +2442,7 @@ else:
 
             course_cap = (
                 st.number_input(
-                    "Daily limit for one course (minutes)",
+                    "Daily limit per course (minutes)",
                     min_value=30,
                     max_value=480,
                     value=(
@@ -2539,12 +2451,6 @@ else:
                     ),
                     step=30,
                     key="pref_course_cap",
-                    help=(
-                        "The scheduler stays on "
-                        "a course until this "
-                        "daily limit is reached, "
-                        "then moves to another course."
-                    ),
                 )
             )
 
@@ -2561,12 +2467,14 @@ else:
             key="save_preferences",
         ):
 
-            if preferred_study > max_study:
+            if (
+                preferred_study
+                > max_study
+            ):
 
                 st.error(
                     "Typical study block cannot "
-                    "be longer than the longest "
-                    "study block."
+                    "exceed longest study block."
                 )
 
             else:
@@ -2612,7 +2520,7 @@ else:
     st.divider()
 
     # =====================================================
-    # ADD TO PLANNER
+    # ADD ITEM
     # =====================================================
 
     st.subheader(
@@ -2621,7 +2529,7 @@ else:
 
     item_type = (
         st.radio(
-            "Type",
+            "Item type",
             [
                 "Study Topic",
                 "Assignment",
@@ -2630,7 +2538,7 @@ else:
                 "Task",
                 "Reminder",
             ],
-            key="item_type_picker",
+            key="item_type",
         )
     )
 
@@ -2649,9 +2557,7 @@ else:
         topic_name = (
             st.text_input(
                 "Topic",
-                placeholder=(
-                    "Object-Oriented Programming"
-                ),
+                placeholder="OOP inheritance",
                 key="topic_name",
             )
         )
@@ -2671,11 +2577,10 @@ else:
             topic_course = None
 
             st.warning(
-                "Add a course before saving "
-                "a study topic."
+                "Create a course first."
             )
 
-        projects = [
+        related_projects = [
             item
             for item
             in st.session_state.academic_work
@@ -2691,13 +2596,16 @@ else:
         ]
 
         project_options = {
-            "None": None,
-            **{
-                project["name"]:
-                project["id"]
-                for project in projects
-            },
+            "None": None
         }
+
+        for project in related_projects:
+
+            project_options[
+                project["name"]
+            ] = project[
+                "id"
+            ]
 
         linked_project_name = (
             st.selectbox(
@@ -2705,7 +2613,7 @@ else:
                 list(
                     project_options.keys()
                 ),
-                key="topic_linked_project",
+                key="topic_project",
             )
         )
 
@@ -2722,19 +2630,23 @@ else:
             )
         )
 
-        if linked_project_id is not None:
+        if (
+            linked_project_id
+            is not None
+        ):
 
-            project = next(
-                item
-                for item in projects
+            linked_project = next(
+                project
+                for project
+                in related_projects
                 if (
-                    item["id"]
+                    project["id"]
                     == linked_project_id
                 )
             )
 
             default_deadline = (
-                project[
+                linked_project[
                     "deadline"
                 ]
             )
@@ -2821,7 +2733,7 @@ else:
 
         topic_url = (
             st.text_input(
-                "Resource link (optional)",
+                "Resource link",
                 placeholder="https://...",
                 key="topic_url",
             )
@@ -2845,21 +2757,19 @@ else:
         if st.button(
             "Add Study Topic",
             use_container_width=True,
-            key="add_topic",
+            key="add_study_topic",
         ):
 
             if not st.session_state.work_windows:
 
                 st.error(
-                    "Add at least one "
-                    "work window first."
+                    "Add a work window first."
                 )
 
             elif not topic_course:
 
                 st.error(
-                    "Add at least one "
-                    "course first."
+                    "Add a course first."
                 )
 
             elif not topic_name.strip():
@@ -2876,14 +2786,18 @@ else:
 
                 st.session_state.study_topics.append(
                     {
-                        "id": topic_id,
+                        "id": (
+                            topic_id
+                        ),
                         "topic": (
                             topic_name.strip()
                         ),
                         "name": (
                             topic_name.strip()
                         ),
-                        "course": topic_course,
+                        "course": (
+                            topic_course
+                        ),
                         "deadline": (
                             topic_deadline
                         ),
@@ -2905,7 +2819,9 @@ else:
                         "difficulty": (
                             difficulty
                         ),
-                        "goal": goal,
+                        "goal": (
+                            goal
+                        ),
                         "notes": (
                             topic_notes.strip()
                         ),
@@ -2915,24 +2831,30 @@ else:
                     }
                 )
 
-                if linked_project_id is not None:
+                if (
+                    linked_project_id
+                    is not None
+                ):
 
                     for project in st.session_state.academic_work:
 
                         if (
                             project["id"]
                             == linked_project_id
-                            and topic_id
-                            not in project[
-                                "linked_topic_ids"
-                            ]
                         ):
 
-                            project[
-                                "linked_topic_ids"
-                            ].append(
+                            if (
                                 topic_id
-                            )
+                                not in project[
+                                    "linked_topic_ids"
+                                ]
+                            ):
+
+                                project[
+                                    "linked_topic_ids"
+                                ].append(
+                                    topic_id
+                                )
 
                 rebuild_schedule()
 
@@ -2956,7 +2878,7 @@ else:
                     == "Assignment"
                     else "Python Project"
                 ),
-                key="academic_work_name",
+                key="work_name",
             )
         )
 
@@ -2966,7 +2888,7 @@ else:
                 st.selectbox(
                     "Course",
                     course_names,
-                    key="academic_work_course",
+                    key="work_course",
                 )
             )
 
@@ -2975,8 +2897,7 @@ else:
             work_course = None
 
             st.warning(
-                "Add a course before saving "
-                "academic work."
+                "Create a course first."
             )
 
         work_due = (
@@ -2988,27 +2909,27 @@ else:
                         days=7
                     )
                 ),
-                key="academic_work_due",
+                key="work_due",
             )
         )
 
-        hours = (
+        work_hours = (
             st.number_input(
                 "Estimated hours",
                 min_value=0,
                 max_value=100,
                 value=2,
-                key="academic_work_hours",
+                key="work_hours",
             )
         )
 
-        mins = (
+        work_minutes = (
             st.number_input(
                 "Additional minutes",
                 min_value=0,
                 max_value=59,
                 value=0,
-                key="academic_work_minutes",
+                key="work_minutes",
             )
         )
 
@@ -3021,7 +2942,7 @@ else:
                     "High",
                 ],
                 index=1,
-                key="academic_work_priority",
+                key="work_priority",
             )
         )
 
@@ -3032,7 +2953,7 @@ else:
                 max_value=480,
                 value=180,
                 step=30,
-                key="academic_work_max_block",
+                key="work_max_block",
             )
         )
 
@@ -3040,22 +2961,22 @@ else:
             st.checkbox(
                 "Allow work on due date",
                 value=True,
-                key="academic_work_allow_due",
+                key="work_allow_due",
             )
         )
 
         work_notes = (
             st.text_area(
                 "Notes / details",
-                key="academic_work_notes",
+                key="work_notes",
             )
         )
 
         work_url = (
             st.text_input(
-                "Resource link (optional)",
+                "Resource link",
                 placeholder="https://...",
-                key="academic_work_url",
+                key="work_url",
             )
         )
 
@@ -3065,38 +2986,35 @@ else:
             key="add_academic_work",
         ):
 
-            total = (
-                hours * 60
-                + mins
+            total_minutes = (
+                work_hours * 60
+                + work_minutes
             )
 
             if not st.session_state.work_windows:
 
                 st.error(
-                    "Add at least one "
-                    "work window first."
+                    "Add a work window first."
                 )
 
             elif not work_course:
 
                 st.error(
-                    "Add at least one "
-                    "course first."
+                    "Add a course first."
                 )
 
             elif not work_name.strip():
 
                 st.error(
                     f"Enter a "
-                    f"{item_type.lower()} "
-                    f"name."
+                    f"{item_type.lower()} name."
                 )
 
-            elif total <= 0:
+            elif total_minutes <= 0:
 
                 st.error(
-                    "Estimated time must "
-                    "be greater than zero."
+                    "Estimated time must be "
+                    "greater than zero."
                 )
 
             else:
@@ -3112,12 +3030,14 @@ else:
                         "course": (
                             work_course
                         ),
-                        "type": item_type,
+                        "type": (
+                            item_type
+                        ),
                         "deadline": (
                             work_due
                         ),
                         "estimated_minutes": int(
-                            total
+                            total_minutes
                         ),
                         "priority": (
                             work_priority
@@ -3186,7 +3106,7 @@ else:
 
             event_days = []
 
-        start_time = (
+        event_start = (
             st.time_input(
                 "Start time",
                 value=time(
@@ -3197,7 +3117,7 @@ else:
             )
         )
 
-        end_time = (
+        event_end = (
             st.time_input(
                 "End time",
                 value=time(
@@ -3218,33 +3138,41 @@ else:
             )
         )
 
-        b1, b2 = st.columns(
-            2
+        buffer1, buffer2 = (
+            st.columns(2)
         )
 
-        with b1:
+        with buffer1:
 
             buffer_before = (
                 st.number_input(
-                    "Travel/setup before (min)",
+                    "Before (min)",
                     min_value=0,
                     max_value=180,
                     value=0,
                     step=5,
-                    key="event_buffer_before",
+                    key="buffer_before",
+                    help=(
+                        "Travel or setup time "
+                        "before the event."
+                    ),
                 )
             )
 
-        with b2:
+        with buffer2:
 
             buffer_after = (
                 st.number_input(
-                    "Travel/wrap-up after (min)",
+                    "After (min)",
                     min_value=0,
                     max_value=180,
                     value=0,
                     step=5,
-                    key="event_buffer_after",
+                    key="buffer_after",
+                    help=(
+                        "Travel or wrap-up time "
+                        "after the event."
+                    ),
                 )
             )
 
@@ -3257,7 +3185,7 @@ else:
 
         event_url = (
             st.text_input(
-                "Event link (optional)",
+                "Event link",
                 placeholder="https://...",
                 key="event_url",
             )
@@ -3275,7 +3203,7 @@ else:
                     "Enter an event."
                 )
 
-            elif end_time <= start_time:
+            elif event_end <= event_start:
 
                 st.error(
                     "End time must be "
@@ -3288,8 +3216,7 @@ else:
             ):
 
                 st.error(
-                    "Select at least "
-                    "one day."
+                    "Select at least one day."
                 )
 
             else:
@@ -3305,13 +3232,17 @@ else:
                         "recurring": (
                             recurring
                         ),
-                        "days": event_days,
-                        "date": event_date,
+                        "days": (
+                            event_days
+                        ),
+                        "date": (
+                            event_date
+                        ),
                         "start_time": (
-                            start_time
+                            event_start
                         ),
                         "end_time": (
-                            end_time
+                            event_end
                         ),
                         "location": (
                             event_location.strip()
@@ -3344,9 +3275,7 @@ else:
         task_name = (
             st.text_input(
                 "Task",
-                placeholder=(
-                    "Grocery shopping"
-                ),
+                placeholder="Grocery shopping",
                 key="task_name",
             )
         )
@@ -3417,7 +3346,7 @@ else:
 
         task_url = (
             st.text_input(
-                "Link (optional)",
+                "Link",
                 placeholder="https://...",
                 key="task_url",
             )
@@ -3429,7 +3358,7 @@ else:
             key="add_task",
         ):
 
-            total = (
+            total_minutes = (
                 task_hours * 60
                 + task_minutes
             )
@@ -3437,8 +3366,7 @@ else:
             if not st.session_state.work_windows:
 
                 st.error(
-                    "Add at least one "
-                    "work window first."
+                    "Add a work window first."
                 )
 
             elif not task_name.strip():
@@ -3447,11 +3375,11 @@ else:
                     "Enter a task."
                 )
 
-            elif total <= 0:
+            elif total_minutes <= 0:
 
                 st.error(
-                    "Estimated time must "
-                    "be greater than zero."
+                    "Estimated time must be "
+                    "greater than zero."
                 )
 
             else:
@@ -3468,7 +3396,7 @@ else:
                             task_deadline
                         ),
                         "estimated_minutes": int(
-                            total
+                            total_minutes
                         ),
                         "priority": (
                             task_priority
@@ -3498,9 +3426,7 @@ else:
         reminder_name = (
             st.text_input(
                 "Reminder",
-                placeholder=(
-                    "Switch laundry"
-                ),
+                placeholder="Switch laundry",
                 key="reminder_name",
             )
         )
@@ -3554,7 +3480,7 @@ else:
 
         reminder_url = (
             st.text_input(
-                "Link (optional)",
+                "Link",
                 placeholder="https://...",
                 key="reminder_url",
             )
@@ -3609,6 +3535,10 @@ else:
 # WEEK CONTROLS
 # =========================================================
 
+week_dates = (
+    get_visible_week()
+)
+
 left, center, right = (
     st.columns(
         [
@@ -3630,19 +3560,13 @@ with left:
 
         st.rerun()
 
-
 with center:
-
-    week_dates = (
-        get_visible_week()
-    )
 
     st.subheader(
         f"{week_dates[0].strftime('%b %d')} "
         f"– "
         f"{week_dates[-1].strftime('%b %d, %Y')}"
     )
-
 
 with right:
 
@@ -3656,45 +3580,44 @@ with right:
         st.rerun()
 
 
-b1, b2, b3 = st.columns(
-    3
+control1, control2, control3 = (
+    st.columns(3)
 )
 
-
-with b1:
+with control1:
 
     if st.button(
         "🔄 Regenerate Schedule",
         use_container_width=True,
-        key="regen_schedule",
+        key="regenerate",
     ):
 
         rebuild_schedule()
 
         st.rerun()
 
-
-with b2:
+with control2:
 
     if st.button(
         "Today",
         use_container_width=True,
-        key="return_today",
+        key="today",
     ):
 
         st.session_state.week_offset = 0
 
         st.rerun()
 
+with control3:
 
-with b3:
-
-    pdf_bytes = build_week_pdf(
-        get_visible_week()
+    pdf_bytes = (
+        build_week_pdf(
+            week_dates
+        )
     )
 
     st.download_button(
-        "🖨️ Download weekly PDF",
+        "🖨️ Download Weekly PDF",
         data=pdf_bytes,
         file_name=(
             f"study_schedule_"
@@ -3703,7 +3626,7 @@ with b3:
         ),
         mime="application/pdf",
         use_container_width=True,
-        key="download_schedule_pdf",
+        key="download_pdf",
     )
 
 
@@ -3713,10 +3636,6 @@ st.divider()
 # =========================================================
 # SUMMARY
 # =========================================================
-
-week_dates = (
-    get_visible_week()
-)
 
 scheduled_academic = sum(
     block["work_minutes"]
@@ -3746,25 +3665,25 @@ available_minutes = sum(
     )
 )
 
-s1, s2, s3 = (
+metric1, metric2, metric3 = (
     st.columns(3)
 )
 
-s1.metric(
+metric1.metric(
     "Academic work scheduled",
     format_minutes(
         scheduled_academic
     ),
 )
 
-s2.metric(
+metric2.metric(
     "Work-window time",
     format_minutes(
         available_minutes
     ),
 )
 
-s3.metric(
+metric3.metric(
     "Courses",
     len(
         st.session_state.courses
@@ -3791,15 +3710,12 @@ def render_day(day):
         )
     )
 
-    for (
-        start,
-        end,
-    ) in work_windows_for_date(
+    for start, end in work_windows_for_date(
         day
     ):
 
         st.caption(
-            f"🕒 Work window "
+            f"🕒 "
             f"{start.strftime('%I:%M %p')} "
             f"– "
             f"{end.strftime('%I:%M %p')}"
@@ -3905,22 +3821,29 @@ def render_day(day):
 
         if course:
 
-            color = course_color(
+            color = (
+                course_color(
+                    course
+                )
+            )
+
+            subtitle = (
                 course
             )
 
-            subtitle = course
-
         else:
 
-            color = "#777777"
+            color = (
+                "#777777"
+            )
 
             subtitle = (
                 item["type"]
             )
 
         if (
-            item["type"] == "Event"
+            item["type"]
+            == "Event"
             and item.get(
                 "location"
             )
@@ -3970,19 +3893,17 @@ def render_day(day):
                 parts = []
 
                 if before:
-
                     parts.append(
                         f"{before}m before"
                     )
 
                 if after:
-
                     parts.append(
                         f"{after}m after"
                     )
 
                 st.caption(
-                    "🚶 Travel/setup buffer: "
+                    "🚶 Buffer: "
                     + " • ".join(
                         parts
                     )
@@ -4004,26 +3925,12 @@ def render_day(day):
 
     for reminder in reminders:
 
-        text = (
+        st.markdown(
             f"🔔 **"
             f"{reminder['time'].strftime('%I:%M %p')} "
             f"— "
             f"{reminder['name']}"
             f"**"
-        )
-
-        if reminder.get(
-            "url"
-        ):
-
-            text += (
-                f"  "
-                f"[Open ↗]"
-                f"({reminder['url']})"
-            )
-
-        st.markdown(
-            text
         )
 
         if reminder.get(
@@ -4036,15 +3943,25 @@ def render_day(day):
                 ]
             )
 
-    # Deadlines
+        if reminder.get(
+            "url"
+        ):
+
+            st.markdown(
+                f"[Open link ↗]"
+                f"({reminder['url']})"
+            )
+
     for work in st.session_state.academic_work:
 
         if work["deadline"] == day:
 
-            color = course_color(
-                work[
-                    "course"
-                ]
+            color = (
+                course_color(
+                    work[
+                        "course"
+                    ]
+                )
             )
 
             st.markdown(
@@ -4054,32 +3971,24 @@ def render_day(day):
                     f'padding-left:8px;'
                     f'margin-top:8px;'
                     f'">'
-
                     f'<b>'
                     f'🚨 Due: '
                     f'{work["name"]}'
                     f'</b>'
-
                     f'<br>'
-
                     f'<span style="'
-                    f'opacity:.7'
+                    f'opacity:.7;'
                     f'">'
                     f'{work["course"]}'
                     f'</span>'
-
                     f'</div>'
                 ),
                 unsafe_allow_html=True,
             )
 
 
-# =========================================================
-# WEEK DISPLAY
-# =========================================================
-
-row1 = st.columns(
-    4
+row1 = (
+    st.columns(4)
 )
 
 for index in range(4):
@@ -4096,8 +4005,8 @@ for index in range(4):
 st.write("")
 
 
-row2 = st.columns(
-    3
+row2 = (
+    st.columns(3)
 )
 
 for index in range(3):
@@ -4121,14 +4030,11 @@ st.header(
     "Schedule Check"
 )
 
-warnings = []
-
 
 def scheduled_minutes(
     source_id,
     item_type,
 ):
-
     return sum(
         block[
             "work_minutes"
@@ -4148,11 +4054,16 @@ def scheduled_minutes(
     )
 
 
+warnings = []
+
+
 for topic in st.session_state.study_topics:
 
-    actual = scheduled_minutes(
-        topic["id"],
-        "Study",
+    actual = (
+        scheduled_minutes(
+            topic["id"],
+            "Study",
+        )
     )
 
     missing = (
@@ -4175,9 +4086,11 @@ for topic in st.session_state.study_topics:
 
 for work in st.session_state.academic_work:
 
-    actual = scheduled_minutes(
-        work["id"],
-        work["type"],
+    actual = (
+        scheduled_minutes(
+            work["id"],
+            work["type"],
+        )
     )
 
     missing = (
@@ -4193,16 +4106,18 @@ for work in st.session_state.academic_work:
             f"{work['course']} — "
             f"{work['name']} needs "
             f"{format_minutes(missing)} "
-            f"more work time before "
+            f"more time before "
             f"{work['deadline'].strftime('%b %d')}."
         )
 
 
 for task in st.session_state.tasks:
 
-    actual = scheduled_minutes(
-        task["id"],
-        "Task",
+    actual = (
+        scheduled_minutes(
+            task["id"],
+            "Task",
+        )
     )
 
     missing = (
@@ -4292,19 +4207,23 @@ with tabs[0]:
         st.session_state.courses
     ):
 
-        c1, c2 = st.columns(
-            [
-                4,
-                1,
-            ]
+        col1, col2 = (
+            st.columns(
+                [
+                    4,
+                    1,
+                ]
+            )
         )
 
-        with c1:
+        with col1:
 
             new_color = (
                 st.color_picker(
                     course["name"],
-                    course["color"],
+                    course[
+                        "color"
+                    ],
                     key=(
                         f"edit_course_color_"
                         f"{course['id']}"
@@ -4314,14 +4233,16 @@ with tabs[0]:
 
             if (
                 new_color
-                != course["color"]
+                != course[
+                    "color"
+                ]
             ):
 
-                course["color"] = (
-                    new_color
-                )
+                course[
+                    "color"
+                ] = new_color
 
-        with c2:
+        with col2:
 
             if st.button(
                 "Delete",
@@ -4331,14 +4252,18 @@ with tabs[0]:
                 ),
             ):
 
-                course_used = (
+                course_name = (
+                    course[
+                        "name"
+                    ]
+                )
+
+                used = (
                     any(
                         topic[
                             "course"
                         ]
-                        == course[
-                            "name"
-                        ]
+                        == course_name
                         for topic
                         in st.session_state.study_topics
                     )
@@ -4346,15 +4271,13 @@ with tabs[0]:
                         item[
                             "course"
                         ]
-                        == course[
-                            "name"
-                        ]
+                        == course_name
                         for item
                         in st.session_state.academic_work
                     )
                 )
 
-                if course_used:
+                if used:
 
                     st.error(
                         "Delete that course's "
@@ -4450,9 +4373,10 @@ with tabs[1]:
 
                     if (
                         topic_id
-                        in work[
-                            "linked_topic_ids"
-                        ]
+                        in work.get(
+                            "linked_topic_ids",
+                            [],
+                        )
                     ):
 
                         work[
@@ -4467,7 +4391,7 @@ with tabs[1]:
 
 
 # =========================================================
-# ASSIGNMENTS & PROJECTS
+# ASSIGNMENTS / PROJECTS
 # =========================================================
 
 with tabs[2]:
@@ -4657,19 +4581,25 @@ with tabs[4]:
             event["name"]
         ):
 
-            if event["recurring"]:
+            if event[
+                "recurring"
+            ]:
 
                 st.write(
                     "Repeats: "
                     + ", ".join(
-                        event["days"]
+                        event[
+                            "days"
+                        ]
                     )
                 )
 
             else:
 
                 st.write(
-                    event["date"].strftime(
+                    event[
+                        "date"
+                    ].strftime(
                         "%B %d, %Y"
                     )
                 )
@@ -4757,7 +4687,9 @@ with tabs[5]:
     for reminder in st.session_state.reminders:
 
         with st.expander(
-            reminder["name"]
+            reminder[
+                "name"
+            ]
         ):
 
             st.write(
@@ -4803,7 +4735,9 @@ with tabs[5]:
             ):
 
                 reminder_id = (
-                    reminder["id"]
+                    reminder[
+                        "id"
+                    ]
                 )
 
                 st.session_state.reminders = [
@@ -4822,7 +4756,7 @@ with tabs[5]:
 
 
 # =========================================================
-# WORK HOURS
+# WORK WINDOWS
 # =========================================================
 
 with tabs[6]:
@@ -4837,7 +4771,9 @@ with tabs[6]:
 
         with st.expander(
             ", ".join(
-                window["days"]
+                window[
+                    "days"
+                ]
             )
         ):
 
@@ -4856,7 +4792,9 @@ with tabs[6]:
             ):
 
                 window_id = (
-                    window["id"]
+                    window[
+                        "id"
+                    ]
                 )
 
                 st.session_state.work_windows = [
